@@ -178,6 +178,9 @@ impl Detector {
     }
 }
 
+// Any copyright to the test code below this comment is dedicated to the
+// Public Domain. http://creativecommons.org/publicdomain/zero/1.0/
+
 #[cfg(test)]
 mod tests {
     use super::*;
