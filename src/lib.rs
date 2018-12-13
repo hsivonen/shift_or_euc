@@ -169,6 +169,9 @@ impl Detector {
                 break;
             }
         }
+        if euc_jp_had_error {
+            return Some(SHIFT_JIS);
+        }
         if last {
             if self.shift_jis_statistics.deviation() > self.euc_jp_statistics.deviation() {
                 return Some(EUC_JP);
