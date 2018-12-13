@@ -14,6 +14,7 @@ struct Statistics {
     kanji: usize,
     hiragana: usize,
     katakana: usize,
+    half_width: usize,
 }
 
 impl Statistics {
@@ -22,6 +23,7 @@ impl Statistics {
             kanji: 0,
             hiragana: 0,
             katakana: 0,
+            half_width: 0,
         }
     }
 
@@ -37,36 +39,36 @@ impl Statistics {
                 0x30A0...0x30FF => {
                     self.katakana += 1;
                 }
+                0xFF61...0xFF9F => {
+                    self.half_width += 1;
+                }
                 _ => {}
             }
         }
     }
 
-    fn deviation(&self) -> usize {
-        let total = self.hiragana + self.katakana + self.kanji;
+    fn deviation(&self) -> f32 {
+        let total = self.hiragana + self.katakana + self.kanji + self.half_width;
         if total == 0 {
             // Avoid division by zero at the end
-            return 0;
+            return 0.0;
         }
-        let expect_hiragana = (total * 6) / 10;
-        let expect_katakana = total / 10;
-        let expect_kanji = (total * 3) / 10;
-        let hiragana_difference = difference(self.hiragana, expect_hiragana);
-        let katakana_difference = difference(self.katakana, expect_katakana);
-        let kanji_difference = difference(self.kanji, expect_kanji);
+        let total_float = total as f32;
+        let expect_hiragana = total_float * 0.6;
+        let expect_katakana = total_float * 0.1;
+        let expect_kanji = total_float * 0.3;
+        let hiragana_difference = self.hiragana as f32 - expect_hiragana;
+        let katakana_difference = self.katakana as f32 - expect_katakana;
+        let kanji_difference = self.kanji as f32 - expect_kanji;
 
-        (hiragana_difference * hiragana_difference
-            + katakana_difference * katakana_difference
-            + kanji_difference * kanji_difference)
-            / (total * total)
-    }
-}
-
-fn difference(a: usize, b: usize) -> usize {
-    if a > b {
-        a - b
-    } else {
-        b - a
+        // The difference compounds, since it counts in both
+        // the category that is under and the category that is
+        // over the expectation
+        (self.half_width as f32
+            + hiragana_difference.abs()
+            + kanji_difference.abs()
+            + katakana_difference.abs())
+            / total_float
     }
 }
 

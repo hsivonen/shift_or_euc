@@ -28,17 +28,17 @@ fn main() {
             let mut detector = Detector::new();
             loop {
                 if let Ok(num_read) = file.read(&mut buffer[..]) {
-                	let opt_enc = if num_read == 0 {
-                		detector.feed(b"", true)
-                	} else {
-                		detector.feed(&buffer[..num_read], false)
-                	};
-                	if let Some(encoding) = opt_enc {
-                		println!("{}", encoding.name());
-                		return;
-                	} else {
-                		assert_ne!(num_read, 0);
-                	}
+                    let opt_enc = if num_read == 0 {
+                        detector.feed(b"", true)
+                    } else {
+                        detector.feed(&buffer[..num_read], false)
+                    };
+                    if let Some(encoding) = opt_enc {
+                        println!("{}", encoding.name());
+                        return;
+                    } else {
+                        assert_ne!(num_read, 0);
+                    }
                 } else {
                     eprintln!("Error: Error reading file.");
                     std::process::exit(-5);
