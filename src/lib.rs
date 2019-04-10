@@ -72,6 +72,18 @@ impl Statistics {
     }
 }
 
+/// Returns the index of the first non-ASCII byte or the first
+/// 0x1B, whichever comes first, or the length of the buffer
+/// if neither is found.
+fn find_non_ascii_or_escape(buffer: &[u8]) -> usize {
+    let ascii_up_to = Encoding::ascii_valid_up_to(buffer);
+    if let Some(escape) = memchr::memchr(0x1B, &buffer[..ascii_up_to]) {
+        escape
+    } else {
+        ascii_up_to
+    }
+}
+
 pub struct Detector {
     shift_jis_decoder: Decoder,
     euc_jp_decoder: Decoder,
@@ -105,6 +117,9 @@ impl Detector {
         self.finished = true; // Will change back to false unless we return early
         let mut i = 0;
         if !self.iso_2022_jp_disqualified {
+            if !self.escape_seen {
+                i = find_non_ascii_or_escape(buffer);
+            }
             while i < buffer.len() {
                 let byte = buffer[i];
                 if byte > 0x7F {
