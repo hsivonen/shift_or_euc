@@ -103,18 +103,22 @@ impl Detector {
             "Tried to used a detector that has finished."
         );
         self.finished = true; // Will change back to false unless we return early
+        let mut i = 0;
         if !self.iso_2022_jp_disqualified {
-            for &byte in buffer.into_iter() {
+            while i < buffer.len() {
+                let byte = buffer[i];
                 if byte > 0x7F {
                     self.iso_2022_jp_disqualified = true;
                     break;
                 }
                 if !self.escape_seen && byte == 0x1B {
                     self.escape_seen = true;
+                    i += 1;
                     continue;
                 }
                 if self.escape_seen && self.second_byte_in_escape == 0 {
                     self.second_byte_in_escape = byte;
+                    i += 1;
                     continue;
                 }
                 match (self.second_byte_in_escape, byte) {
@@ -127,12 +131,12 @@ impl Detector {
                     self.iso_2022_jp_disqualified = true;
                     break;
                 }
+                i += 1;
             }
         }
-        // TODO: Skip bytes already examined
         let mut output = [0u16; 1024];
         let mut euc_jp_had_error = false;
-        let mut euc_jp_total_read = 0;
+        let mut euc_jp_total_read = i;
         loop {
             let (result, read, written) = self.euc_jp_decoder.decode_to_utf16_without_replacement(
                 &buffer[euc_jp_total_read..],
@@ -149,7 +153,7 @@ impl Detector {
                 break;
             }
         }
-        let mut shift_jis_total_read = 0;
+        let mut shift_jis_total_read = i;
         loop {
             let (result, read, written) =
                 self.shift_jis_decoder.decode_to_utf16_without_replacement(
