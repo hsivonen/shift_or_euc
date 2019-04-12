@@ -123,7 +123,8 @@ impl Detector {
         }
         let mut shift_jis_total_read = i;
         let mut shift_jis_had_error = false;
-        let shift_jis_non_half_width_up_to = i + find_shift_jis_half_width(&buffer[i..]);
+        let shift_jis_non_half_width_up_to =
+            i + find_shift_jis_half_width(&buffer[i..euc_jp_total_read]);
         loop {
             let (result, read, _written) =
                 self.shift_jis_decoder.decode_to_utf16_without_replacement(
