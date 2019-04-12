@@ -9,69 +9,6 @@
 
 use encoding_rs::*;
 
-#[derive(Debug)]
-struct Statistics {
-    kanji: usize,
-    hiragana: usize,
-    katakana: usize,
-    half_width: usize,
-}
-
-impl Statistics {
-    fn new() -> Self {
-        Statistics {
-            kanji: 0,
-            hiragana: 0,
-            katakana: 0,
-            half_width: 0,
-        }
-    }
-
-    fn accumulate(&mut self, buffer: &[u16]) {
-        for &unit in buffer.into_iter() {
-            match unit {
-                0x3040...0x309F => {
-                    self.hiragana += 1;
-                }
-                0x4E00...0x9FEF => {
-                    self.kanji += 1;
-                }
-                0x30A0...0x30FF => {
-                    self.katakana += 1;
-                }
-                0xFF61...0xFF9F => {
-                    self.half_width += 1;
-                }
-                _ => {}
-            }
-        }
-    }
-
-    fn deviation(&self) -> f32 {
-        let total = self.hiragana + self.katakana + self.kanji + self.half_width;
-        if total == 0 {
-            // Avoid division by zero at the end
-            return 0.0;
-        }
-        let total_float = total as f32;
-        let expect_hiragana = total_float * 0.6;
-        let expect_katakana = total_float * 0.1;
-        let expect_kanji = total_float * 0.3;
-        let hiragana_difference = self.hiragana as f32 - expect_hiragana;
-        let katakana_difference = self.katakana as f32 - expect_katakana;
-        let kanji_difference = self.kanji as f32 - expect_kanji;
-
-        // The difference compounds, since it counts in both
-        // the category that is under and the category that is
-        // over the expectation
-        (self.half_width as f32
-            + hiragana_difference.abs()
-            + kanji_difference.abs()
-            + katakana_difference.abs())
-            / total_float
-    }
-}
-
 /// Returns the index of the first non-ASCII byte or the first
 /// 0x1B, whichever comes first, or the length of the buffer
 /// if neither is found.
@@ -84,11 +21,29 @@ fn find_non_ascii_or_escape(buffer: &[u8]) -> usize {
     }
 }
 
+fn find_euc_jp_half_width(buffer: &[u8]) -> usize {
+    if let Some(half_width) = memchr::memchr(0x8E, buffer) {
+        half_width
+    } else {
+        buffer.len()
+    }
+}
+
+fn find_shift_jis_half_width(buffer: &[u8]) -> usize {
+    for (i, &b) in buffer.into_iter().enumerate() {
+        match b {
+            0xA1...0xDF => {
+                return i;
+            }
+            _ => {}
+        }
+    }
+    buffer.len()
+}
+
 pub struct Detector {
     shift_jis_decoder: Decoder,
     euc_jp_decoder: Decoder,
-    shift_jis_statistics: Statistics,
-    euc_jp_statistics: Statistics,
     second_byte_in_escape: u8,
     iso_2022_jp_disqualified: bool,
     escape_seen: bool,
@@ -100,8 +55,6 @@ impl Detector {
         Detector {
             shift_jis_decoder: SHIFT_JIS.new_decoder_without_bom_handling(),
             euc_jp_decoder: EUC_JP.new_decoder_without_bom_handling(),
-            shift_jis_statistics: Statistics::new(),
-            euc_jp_statistics: Statistics::new(),
             second_byte_in_escape: 0,
             iso_2022_jp_disqualified: !allow_2022,
             escape_seen: false,
@@ -152,9 +105,10 @@ impl Detector {
         let mut output = [0u16; 1024];
         let mut euc_jp_had_error = false;
         let mut euc_jp_total_read = i;
+        let euc_jp_non_half_width_up_to = i + find_euc_jp_half_width(&buffer[i..]);
         loop {
-            let (result, read, written) = self.euc_jp_decoder.decode_to_utf16_without_replacement(
-                &buffer[euc_jp_total_read..],
+            let (result, read, _written) = self.euc_jp_decoder.decode_to_utf16_without_replacement(
+                &buffer[euc_jp_total_read..euc_jp_non_half_width_up_to],
                 &mut output[..],
                 last,
             );
@@ -163,38 +117,48 @@ impl Detector {
                 euc_jp_had_error = true;
                 break;
             }
-            self.euc_jp_statistics.accumulate(&output[..written]);
             if result == DecoderResult::InputEmpty {
                 break;
             }
         }
         let mut shift_jis_total_read = i;
+        let mut shift_jis_had_error = false;
+        let shift_jis_non_half_width_up_to = i + find_shift_jis_half_width(&buffer[i..]);
         loop {
-            let (result, read, written) =
+            let (result, read, _written) =
                 self.shift_jis_decoder.decode_to_utf16_without_replacement(
-                    &buffer[shift_jis_total_read..],
+                    &buffer[shift_jis_total_read..shift_jis_non_half_width_up_to],
                     &mut output[..],
                     last,
                 );
             shift_jis_total_read += read;
             if let DecoderResult::Malformed(_, _) = result {
-                if euc_jp_had_error && euc_jp_total_read <= shift_jis_total_read {
-                    return Some(SHIFT_JIS);
-                }
-                return Some(EUC_JP);
+                shift_jis_had_error = true;
+                break;
             }
-            self.shift_jis_statistics.accumulate(&output[..written]);
             if result == DecoderResult::InputEmpty {
                 break;
             }
         }
+        if euc_jp_total_read < shift_jis_total_read {
+            return Some(SHIFT_JIS);
+        }
+        if shift_jis_total_read < euc_jp_total_read {
+            return Some(EUC_JP);
+        }
+        assert_eq!(euc_jp_total_read, shift_jis_total_read);
+        // If equal, error wins over half-width katakana
         if euc_jp_had_error {
             return Some(SHIFT_JIS);
         }
+        if shift_jis_had_error {
+            return Some(EUC_JP);
+        }
+        // In case of a tie, Shift_JIS wins
+        if shift_jis_total_read < buffer.len() {
+            return Some(SHIFT_JIS);
+        }
         if last {
-            if self.shift_jis_statistics.deviation() > self.euc_jp_statistics.deviation() {
-                return Some(EUC_JP);
-            }
             return Some(SHIFT_JIS);
         }
         self.finished = false;
