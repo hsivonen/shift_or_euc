@@ -110,7 +110,7 @@ impl Detector {
             let (result, read, _written) = self.euc_jp_decoder.decode_to_utf16_without_replacement(
                 &buffer[euc_jp_total_read..euc_jp_non_half_width_up_to],
                 &mut output[..],
-                last,
+                last && euc_jp_non_half_width_up_to == buffer.len(),
             );
             euc_jp_total_read += read;
             if let DecoderResult::Malformed(_, _) = result {
@@ -130,7 +130,7 @@ impl Detector {
                 self.shift_jis_decoder.decode_to_utf16_without_replacement(
                     &buffer[shift_jis_total_read..shift_jis_non_half_width_up_to],
                     &mut output[..],
-                    last,
+                    last && shift_jis_non_half_width_up_to == buffer.len(),
                 );
             shift_jis_total_read += read;
             if let DecoderResult::Malformed(_, _) = result {
