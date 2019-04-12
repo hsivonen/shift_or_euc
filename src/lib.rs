@@ -96,14 +96,14 @@ pub struct Detector {
 }
 
 impl Detector {
-    pub fn new() -> Self {
+    pub fn new(allow_2022: bool) -> Self {
         Detector {
             shift_jis_decoder: SHIFT_JIS.new_decoder_without_bom_handling(),
             euc_jp_decoder: EUC_JP.new_decoder_without_bom_handling(),
             shift_jis_statistics: Statistics::new(),
             euc_jp_statistics: Statistics::new(),
             second_byte_in_escape: 0,
-            iso_2022_jp_disqualified: false,
+            iso_2022_jp_disqualified: !allow_2022,
             escape_seen: false,
             finished: false,
         }

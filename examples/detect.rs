@@ -25,7 +25,7 @@ fn main() {
         }
         if let Ok(mut file) = File::open(path) {
             let mut buffer = [0u8; 4096];
-            let mut detector = Detector::new();
+            let mut detector = Detector::new(true);
             loop {
                 if let Ok(num_read) = file.read(&mut buffer[..]) {
                     let opt_enc = if num_read == 0 {
