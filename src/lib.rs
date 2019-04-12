@@ -210,7 +210,7 @@ mod tests {
     use super::*;
     #[test]
     fn test_iso_2022_jp() {
-        let mut detector = Detector::new();
+        let mut detector = Detector::new(true);
         assert_eq!(
             detector.feed(b"abc\x1B\x28\x42\xFF", true),
             Some(ISO_2022_JP)
@@ -219,25 +219,25 @@ mod tests {
 
     #[test]
     fn test_error_precedence() {
-        let mut detector = Detector::new();
+        let mut detector = Detector::new(true);
         assert_eq!(detector.feed(b"abc\xFF", true), Some(SHIFT_JIS));
     }
 
     #[test]
     fn test_invalid_euc_jp() {
-        let mut detector = Detector::new();
+        let mut detector = Detector::new(true);
         assert_eq!(detector.feed(b"abc\x81\x40", true), Some(SHIFT_JIS));
     }
 
     #[test]
     fn test_invalid_shift_jis() {
-        let mut detector = Detector::new();
+        let mut detector = Detector::new(true);
         assert_eq!(detector.feed(b"abc\xEB\xA8", true), Some(EUC_JP));
     }
 
     #[test]
     fn test_invalid_shift_jis_before_invalid_euc_jp() {
-        let mut detector = Detector::new();
+        let mut detector = Detector::new(true);
         assert_eq!(detector.feed(b"abc\xEB\xA8\x81\x40", true), Some(EUC_JP));
     }
 
