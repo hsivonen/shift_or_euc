@@ -21,24 +21,34 @@ fn find_non_ascii_or_escape(buffer: &[u8]) -> usize {
     }
 }
 
-fn find_euc_jp_half_width(buffer: &[u8]) -> usize {
-    if let Some(half_width) = memchr::memchr(0x8E, buffer) {
-        half_width
-    } else {
-        buffer.len()
-    }
-}
-
-fn find_shift_jis_half_width(buffer: &[u8]) -> usize {
-    for (i, &b) in buffer.into_iter().enumerate() {
-        match b {
-            0xA1...0xDF => {
-                return i;
+#[inline(always)]
+fn feed_decoder(decoder: &mut Decoder, byte: u8, last: bool) -> bool {
+    let mut output = [0u16; 1];
+    let input = [byte];
+    let (result, _read, written) = decoder.decode_to_utf16_without_replacement(
+        if last { b"" } else { &input },
+        &mut output,
+        last,
+    );
+    match result {
+        DecoderResult::InputEmpty => {
+            if written == 1 {
+                match output[0] {
+                    0xFF61...0xFF9F => {
+                        return false;
+                    }
+                    _ => {}
+                }
             }
-            _ => {}
+        }
+        DecoderResult::Malformed(_, _) => {
+            return false;
+        }
+        DecoderResult::OutputFull => {
+            unreachable!();
         }
     }
-    buffer.len()
+    true
 }
 
 pub struct Detector {
@@ -102,65 +112,21 @@ impl Detector {
                 i += 1;
             }
         }
-        let mut output = [0u16; 1024];
-        let mut euc_jp_had_error = false;
-        let mut euc_jp_total_read = i;
-        let euc_jp_non_half_width_up_to = i + find_euc_jp_half_width(&buffer[i..]);
-        loop {
-            let (result, read, _written) = self.euc_jp_decoder.decode_to_utf16_without_replacement(
-                &buffer[euc_jp_total_read..euc_jp_non_half_width_up_to],
-                &mut output[..],
-                last && euc_jp_non_half_width_up_to == buffer.len(),
-            );
-            euc_jp_total_read += read;
-            if let DecoderResult::Malformed(_, _) = result {
-                euc_jp_had_error = true;
-                break;
+        for &byte in &buffer[i..] {
+            if !feed_decoder(&mut self.euc_jp_decoder, byte, false) {
+                return Some(SHIFT_JIS);
             }
-            if result == DecoderResult::InputEmpty {
-                break;
+            if !feed_decoder(&mut self.shift_jis_decoder, byte, false) {
+                return Some(EUC_JP);
             }
-        }
-        let mut shift_jis_total_read = i;
-        let mut shift_jis_had_error = false;
-        let shift_jis_non_half_width_up_to =
-            i + find_shift_jis_half_width(&buffer[i..euc_jp_total_read]);
-        loop {
-            let (result, read, _written) =
-                self.shift_jis_decoder.decode_to_utf16_without_replacement(
-                    &buffer[shift_jis_total_read..shift_jis_non_half_width_up_to],
-                    &mut output[..],
-                    last && shift_jis_non_half_width_up_to == buffer.len(),
-                );
-            shift_jis_total_read += read;
-            if let DecoderResult::Malformed(_, _) = result {
-                shift_jis_had_error = true;
-                break;
-            }
-            if result == DecoderResult::InputEmpty {
-                break;
-            }
-        }
-        if euc_jp_total_read < shift_jis_total_read {
-            return Some(SHIFT_JIS);
-        }
-        if shift_jis_total_read < euc_jp_total_read {
-            return Some(EUC_JP);
-        }
-        assert_eq!(euc_jp_total_read, shift_jis_total_read);
-        // If equal, error wins over half-width katakana
-        if euc_jp_had_error {
-            return Some(SHIFT_JIS);
-        }
-        if shift_jis_had_error {
-            return Some(EUC_JP);
-        }
-        // In case of a tie, Shift_JIS wins
-        if shift_jis_total_read < buffer.len() {
-            return Some(SHIFT_JIS);
         }
         if last {
-            return Some(SHIFT_JIS);
+            if !feed_decoder(&mut self.euc_jp_decoder, 0, true) {
+                return Some(SHIFT_JIS);
+            }
+            if !feed_decoder(&mut self.shift_jis_decoder, 0, true) {
+                return Some(EUC_JP);
+            }
         }
         self.finished = false;
         None
