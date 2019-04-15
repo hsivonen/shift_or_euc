@@ -7,7 +7,12 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use encoding_rs::*;
+use encoding_rs::Decoder;
+use encoding_rs::DecoderResult;
+use encoding_rs::Encoding;
+use encoding_rs::EUC_JP;
+use encoding_rs::ISO_2022_JP;
+use encoding_rs::SHIFT_JIS;
 
 /// Returns the index of the first non-ASCII byte or the first
 /// 0x1B, whichever comes first, or the length of the buffer
