@@ -36,8 +36,9 @@ fn main() {
                     if let Some(encoding) = opt_enc {
                         println!("{}", encoding.name());
                         return;
-                    } else {
-                        assert_ne!(num_read, 0);
+                    } else if num_read == 0 {
+                        println!("Undecided");
+                        return;
                     }
                 } else {
                     eprintln!("Error: Error reading file.");

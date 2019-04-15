@@ -2,9 +2,7 @@
 
 [![Apache 2 / MIT dual-licensed](https://img.shields.io/badge/license-Apache%202%20%2F%20MIT-blue.svg)](https://github.com/hsivonen/shift_or_euc/blob/master/COPYRIGHT)
 
-An unoptimized and totally experimental Japanese encoding detector.
-
-[Description of algorithm.](https://github.com/whatwg/encoding/issues/157)
+A Japanese legacy encoding detector for detecting between Shift_JIS, EUC-JP, and, optionally, ISO-2022-JP.
 
 ## Licensing
 
@@ -22,3 +20,4 @@ The program prints one of:
 * Shift_JIS
 * EUC-JP
 * ISO-2022-JP
+* Undecided
