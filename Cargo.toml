@@ -1,8 +1,16 @@
 [package]
 name = "shift_or_euc"
-version = "0.1.0"
+description = "Detects among the Japanese legacy encodings"
+version = "0.1.0" # Remember to keep html_root_url in lib.rs in sync!
 authors = ["Henri Sivonen <hsivonen@hsivonen.fi>"]
 edition = "2018"
+license = "MIT/Apache-2.0"
+readme = "README.md"
+documentation = "https://docs.rs/shift_or_euc/"
+homepage = "https://docs.rs/shift_or_euc/"
+repository = "https://github.com/hsivonen/shift_or_euc"
+keywords = ["encoding", "web", "charset"]
+categories = ["text-processing", "encoding", "web-programming", "internationalization"]
 
 [dependencies]
 encoding_rs = "0.8.13"
