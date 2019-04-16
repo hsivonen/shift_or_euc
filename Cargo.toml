@@ -13,5 +13,5 @@ keywords = ["encoding", "web", "charset"]
 categories = ["text-processing", "encoding", "web-programming", "internationalization"]
 
 [dependencies]
-encoding_rs = "0.8.13"
+encoding_rs = "0.8.17"
 memchr = "2.2.0"
