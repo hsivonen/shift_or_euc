@@ -1,10 +1,11 @@
 # shift_or_euc
 
-[![Apache 2 / MIT dual-licensed](https://img.shields.io/badge/license-Apache%202%20%2F%20MIT-blue.svg)](https://github.com/hsivonen/shift_or_euc/blob/master/COPYRIGHT)
+[![Apache 2 OR MIT dual-licensed](https://img.shields.io/badge/license-Apache%202%20%2F%20MIT-blue.svg)](https://github.com/hsivonen/shift_or_euc/blob/master/COPYRIGHT)
 
 A Japanese legacy encoding detector for detecting between Shift_JIS, EUC-JP,
 and, optionally, ISO-2022-JP _given_ the assumption that the encoding is one
-of those.
+of those. For a detector that detects more encodings, please see
+[`chardetng`](https://docs.rs/crate/chardetng).
 
 This detector is generally more accurate (but see below about the failure
 mode on half-width katakana) and decides much sooner than machine
@@ -71,3 +72,14 @@ the title of the document. It is possible for document title to consist
 entirely of undecidable kanji. (Indeed, Japanese Wikipedia has articles with
 such titles.) If the detector is undecided, falling back to Shift_JIS is
 typically the Web oriented better guess.
+
+## Project Status
+
+This crate is no longer used in projects that the author works on. The
+crate is believed to be feature-complete and further development seems
+unnecessary and is not expected.
+
+## Version History
+
+* 1.0.0 Metadata-only update.
+* 0.1.0 First release.

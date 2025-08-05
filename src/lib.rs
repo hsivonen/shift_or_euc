@@ -7,7 +7,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#![doc(html_root_url = "https://docs.rs/shift_or_euc/0.1.0")]
+#![doc(html_root_url = "https://docs.rs/shift_or_euc/1.0.0")]
 
 //! A Japanese legacy encoding detector for detecting between Shift_JIS,
 //! EUC-JP, and, optionally, ISO-2022-JP _given_ the assumption that the
